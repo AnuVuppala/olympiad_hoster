@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QuizChamp · GK Championship</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ── Reset & Base ─────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F7F7F5;color:#1a1a1a;-webkit-font-smoothing:antialiased;line-height:1.5}
+button,input,select,textarea{font-family:inherit;font-size:inherit}
+img{display:block}
+
+/* ── Tokens ───────────────────────────────────────────── */
+:root{
+  --green:#16A37F;--green-dark:#0D6B56;--green-dim:#E5F5F0;--green-mid:#1DB891;
+  --red:#D94F4F;--red-dim:#FDEAEA;
+  --amber:#C47C0A;--amber-dim:#FDF3DC;
+  --blue:#2869C6;--blue-dim:#EAF0FC;
+  --ink:#1a1a1a;--ink2:#555;--ink3:#888;--ink4:#aaa;
+  --border:#E5E4E0;--border2:#D0CFC9;
+  --bg:#F7F7F5;--surface:#FFFFFF;--surface2:#F2F1EE;
+  --radius:10px;--radius-lg:14px;--radius-xl:18px;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.05);
+}
+
+/* ── Layout ───────────────────────────────────────────── */
+.page{display:none;animation:fadeIn .18s ease}
+.page.show{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.wrap{max-width:880px;margin:0 auto;padding:32px 20px}
+.wrap-sm{max-width:480px;margin:0 auto;padding:32px 20px}
+.wrap-md{max-width:680px;margin:0 auto;padding:32px 20px}
+
+/* ── Nav ──────────────────────────────────────────────── */
+.nav{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:0;position:sticky;top:0;z-index:100}
+.nav-brand{display:flex;align-items:center;gap:9px;margin-right:24px;text-decoration:none;color:inherit}
+.nav-logo{width:30px;height:30px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;letter-spacing:-.5px;flex-shrink:0}
+.nav-name{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.nav-links{display:flex;flex:1}
+.nav-link{height:52px;padding:0 13px;display:flex;align-items:center;font-size:13px;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;user-select:none;white-space:nowrap}
+.nav-link:hover{color:var(--ink)}
+.nav-link.active{color:var(--green-dark);border-bottom-color:var(--green);font-weight:500}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.nav-badge{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--green-dark);padding:3px 10px;border-radius:20px;background:var(--green-dim);border:1px solid #9FE1CB}
+.nav-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Buttons ──────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;cursor:pointer;font-weight:500;transition:all .15s;white-space:nowrap;border-radius:var(--radius)}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--green);color:#fff;padding:9px 18px;font-size:13px}
+.btn-primary:hover:not(:disabled){background:var(--green-dark)}
+.btn-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--border2);padding:8px 16px;font-size:13px}
+.btn-secondary:hover:not(:disabled){background:var(--surface2)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid #F5B8B8;padding:8px 14px;font-size:13px}
+.btn-danger:hover:not(:disabled){background:#FBD8D8}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-lg{padding:12px 28px;font-size:15px;border-radius:var(--radius-lg)}
+.btn-full{width:100%}
+
+/* ── Cards ────────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow)}
+.card-flat{background:var(--surface2);border-radius:var(--radius);padding:14px}
+.card-section{border-bottom:1px solid var(--border);padding:14px 20px}
+.card-section:last-child{border-bottom:none}
+
+/* ── Form ─────────────────────────────────────────────── */
+.field{margin-bottom:14px}
+.label{display:block;font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.4px;text-transform:uppercase;margin-bottom:5px}
+.input{width:100%;border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;font-size:13px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .15s,box-shadow .15s}
+.input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(22,163,127,.1)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+
+/* ── Badges ───────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:500;border:1px solid}
+.badge-green{background:var(--green-dim);color:var(--green-dark);border-color:#9FE1CB}
+.badge-amber{background:var(--amber-dim);color:var(--amber);border-color:#F5D080}
+.badge-red{background:var(--red-dim);color:var(--red);border-color:#F5B8B8}
+.badge-blue{background:var(--blue-dim);color:var(--blue);border-color:#A8C4F0}
+.badge-gray{background:var(--surface2);color:var(--ink3);border-color:var(--border2)}
+
+/* ── Alerts ───────────────────────────────────────────── */
+.alert{border-radius:var(--radius);padding:11px 14px;font-size:13px;border:1px solid;display:flex;align-items:flex-start;gap:9px;margin-bottom:14px}
+.alert-warn{background:var(--amber-dim);border-color:#F5D080;color:#7A4C05}
+.alert-success{background:var(--green-dim);border-color:#9FE1CB;color:var(--green-dark)}
+.alert-info{background:var(--blue-dim);border-color:#A8C4F0;color:#1A4FA0}
+.alert-error{background:var(--red-dim);border-color:#F5B8B8;color:#8B1A1A}
+
+/* ── Table ────────────────────────────────────────────── */
+.table-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:var(--surface2)}
+th{text-align:left;padding:9px 14px;font-size:11px;color:var(--ink3);font-weight:600;letter-spacing:.3px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FAFAF8}
+
+/* ── Tabs ─────────────────────────────────────────────── */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab-btn{padding:9px 15px;font-size:13px;color:var(--ink3);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;transition:all .15s}
+.tab-btn:hover{color:var(--ink)}
+.tab-btn.active{color:var(--green-dark);border-bottom-color:var(--green);font-weight:500}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ── Stats ────────────────────────────────────────────── */
+.stat-card{background:var(--surface2);border-radius:var(--radius-lg);padding:16px;text-align:center}
+.stat-card:hover{background:#ECEAE6}
+.stat-val{font-size:26px;font-weight:700;letter-spacing:-1px;margin-bottom:2px;line-height:1}
+.stat-label{font-size:11px;color:var(--ink3)}
+
+/* ── Chips ────────────────────────────────────────────── */
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.chip{padding:3px 10px;border-radius:20px;font-size:12px;border:1px solid var(--border2);color:var(--ink3);cursor:pointer;transition:all .15s;user-select:none}
+.chip.on{background:var(--green-dim);border-color:#9FE1CB;color:var(--green-dark)}
+
+/* ── Leaderboard ──────────────────────────────────────── */
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);transition:padding-left .15s}
+.lb-row:last-child{border-bottom:none}
+.lb-row:hover{padding-left:4px}
+.lb-rank{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.lb-1{background:var(--amber-dim);color:var(--amber)}
+.lb-2{background:var(--surface2);color:var(--ink2)}
+.lb-3{background:#FBF0EC;color:#A04020}
+.lb-n{background:var(--surface2);color:var(--ink4);font-size:11px}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-sub{font-size:11px;color:var(--ink4)}
+.lb-score{font-size:15px;font-weight:600;color:var(--green-dark)}
+
+/* ── Strike dots ──────────────────────────────────────── */
+.strike-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .3s}
+.strike-dot.hit{background:var(--red)}
+.strike-row{display:flex;gap:3px}
+
+/* ── Spinner ──────────────────────────────────────────── */
+.spinner{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink4);padding:8px 0}
+.spinner-dot{width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;animation:sdot 1.2s infinite}
+@keyframes sdot{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+/* ── Toast ────────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;transition:transform .25s ease;z-index:9999;pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.success{background:var(--green-dark)}
+.toast.error{background:var(--red)}
+
+/* ── Progress bar (mini) ──────────────────────────────── */
+.mini-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;width:80px}
+.mini-bar-fill{height:100%;background:var(--green);border-radius:2px}
+
+/* ── Login page ───────────────────────────────────────── */
+.login-split{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 52px)}
+.login-left{background:var(--green-dark);padding:56px 48px;display:flex;flex-direction:column;justify-content:center}
+.login-right{background:var(--surface);padding:48px;display:flex;align-items:center;justify-content:center}
+.login-box{width:100%;max-width:340px}
+.demo-row{padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--ink3);transition:background .15s}
+.demo-row:hover{background:var(--surface2);color:var(--ink)}
+
+/* ── Home hero ────────────────────────────────────────── */
+.hero{text-align:center;padding:52px 20px 40px}
+.hero-eyebrow{display:inline-block;font-size:12px;color:var(--ink3);padding:3px 12px;border-radius:20px;background:var(--surface);border:1px solid var(--border);margin-bottom:16px}
+.hero-h{font-size:38px;font-weight:700;letter-spacing:-1.5px;line-height:1.15;margin-bottom:12px}
+.hero-h span{color:var(--green)}
+.hero-sub{font-size:15px;color:var(--ink3);max-width:420px;margin:0 auto 24px;line-height:1.7}
+.hero-btns{display:flex;gap:8px;justify-content:center}
+
+/* ── Portal cards ─────────────────────────────────────── */
+.portal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.portal-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.portal-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.portal-card:active{transform:translateY(-1px)}
+.portal-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:12px}
+.portal-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.portal-desc{font-size:12px;color:var(--ink3);line-height:1.5}
+.portal-arrow{position:absolute;top:16px;right:16px;color:var(--ink4);font-size:14px;transition:transform .18s}
+.portal-card:hover .portal-arrow{transform:translate(2px,-2px)}
+
+/* ── Score tiles ──────────────────────────────────────── */
+.score-tile{border-radius:var(--radius-lg);padding:14px;text-align:center}
+.score-tile-val{font-size:20px;font-weight:700;margin-bottom:2px}
+.score-tile-lbl{font-size:11px}
+
+/* ── Quiz overlay ─────────────────────────────────────── */
+.quiz-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;flex-direction:column;overflow-y:auto}
+.quiz-overlay.show{display:flex}
+.quiz-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0}
+.quiz-meta{font-size:14px;font-weight:500}
+.quiz-sub{font-size:11px;color:var(--ink3);margin-top:1px}
+.quiz-score-val{font-size:22px;font-weight:700;color:var(--green-dark);line-height:1}
+.quiz-score-lbl{font-size:10px;color:var(--ink4);text-align:center;margin-top:1px}
+.timer-wrap{position:relative;width:52px;height:52px}
+.timer-svg{width:52px;height:52px;transform:rotate(-90deg)}
+.timer-track{fill:none;stroke:var(--border);stroke-width:3.5}
+.timer-arc{fill:none;stroke:var(--green);stroke-width:3.5;stroke-linecap:round;stroke-dasharray:132;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear,stroke .3s}
+.timer-arc.warn{stroke:var(--red)}
+.timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;transition:color .3s}
+.timer-num.warn{color:var(--red)}
+.quiz-progress{height:3px;background:var(--border)}
+.quiz-progress-fill{height:100%;background:var(--green);transition:width .5s ease}
+.quiz-notice{padding:7px 20px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;color:var(--ink4);display:flex;align-items:center;gap:6px}
+.quiz-body{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+.quiz-inner{width:100%;max-width:560px}
+.question-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;animation:fadeIn .2s ease}
+.question-text{font-size:17px;font-weight:500;line-height:1.55;margin-bottom:20px;color:var(--ink)}
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+.option{padding:12px 14px;border:1px solid var(--border2);border-radius:var(--radius-lg);cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;transition:all .15s;background:var(--surface);text-align:left;width:100%;color:var(--ink)}
+.option:hover{border-color:var(--green-mid);background:var(--green-dim);transform:translateY(-1px)}
+.option:active{transform:scale(.98)}
+.option.selected{border-color:var(--green-mid);background:var(--green-dim);color:var(--green-dark)}
+.option.correct{border-color:#12845E;background:#D4F0E6;color:#0A5A3E;animation:popIn .25s ease}
+.option.wrong{border-color:var(--red);background:var(--red-dim);color:#8B1A1A;animation:shake .3s ease}
+.option:disabled{pointer-events:none;opacity:.55}
+.option-key{width:24px;height:24px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;font-family:monospace;transition:all .15s}
+.option:hover .option-key,.option.selected .option-key{background:#9FE1CB;border-color:#5DCAA5;color:var(--green-dark)}
+.option.correct .option-key{background:#5DCAA5;border-color:var(--green);color:#0A3D2B}
+.option.wrong .option-key{background:#F5B8B8;border-color:var(--red);color:#6B0F0F}
+.quiz-hint{font-size:11px;color:var(--ink4);text-align:center}
+@keyframes popIn{0%{transform:scale(.97)}60%{transform:scale(1.02)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* ── Result breakdown ─────────────────────────────────── */
+.breakdown-row{display:flex;align-items:flex-start;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.breakdown-row:last-child{border-bottom:none}
+.breakdown-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.breakdown-opts{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}
+.breakdown-opt{padding:5px 9px;border-radius:7px;font-size:12px;border:1px solid var(--border);color:var(--ink3);display:flex;align-items:center;gap:5px}
+.breakdown-opt.correct{background:var(--green-dim);border-color:#9FE1CB;color:var(--green-dark)}
+.breakdown-opt.wrong{background:var(--red-dim);border-color:#F5B8B8;color:var(--red)}
+
+/* ── Empty state ──────────────────────────────────────── */
+.empty{padding:40px;text-align:center;color:var(--ink4);font-size:13px}
+
+/* ── Section header ───────────────────────────────────── */
+.section-h{font-size:15px;font-weight:600;letter-spacing:-.3px;margin-bottom:4px}
+.section-sub{font-size:13px;color:var(--ink3);margin-bottom:20px}
+
+/* ── Divider ──────────────────────────────────────────── */
+.divider{height:1px;background:var(--border);margin:20px 0}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-logo">GK</div>
+    <span class="nav-name">QuizChamp</span>
+  </div>
+  <div class="nav-links">
+    <div class="nav-link active" onclick="go('home',this)">Home</div>
+    <div class="nav-link" id="nl-student" style="display:none" onclick="go('student',this)">My dashboard</div>
+    <div class="nav-link" id="nl-school" style="display:none" onclick="go('school',this)">School admin</div>
+    <div class="nav-link" id="nl-company" style="display:none" onclick="go('company',this)">Company admin</div>
+    <div class="nav-link" onclick="go('board',this)">Leaderboard</div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-badge"><div class="nav-badge-dot"></div>District round live</div>
+    <button class="btn btn-secondary btn-sm" id="btn-logout" style="display:none" onclick="logout()">Sign out</button>
+    <button class="btn btn-primary btn-sm" id="btn-login" onclick="go('login',null)">Sign in</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════ HOME ═══════════════════ -->
+<div id="pg-home" class="page show">
+  <div class="hero">
+    <div class="hero-eyebrow">Telangana GK Championship 2025</div>
+    <h1 class="hero-h">Where knowledge meets <span>speed</span></h1>
+    <p class="hero-sub">Class 1–8 students compete across schools, districts and the state. 10 seconds per question. Every millisecond counts.</p>
+    <div class="hero-btns">
+      <button class="btn btn-primary btn-lg" onclick="go('login',null)">I'm a student</button>
+      <button class="btn btn-secondary btn-lg" onclick="go('login',null)">Admin login</button>
+    </div>
+  </div>
+
+  <div class="wrap" style="padding-top:0">
+    <!-- Stats -->
+    <div class="grid4" style="margin-bottom:24px">
+      <div class="stat-card"><div class="stat-val" style="color:var(--green-dark)" id="hs-students">—</div><div class="stat-label">Students enrolled</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)" id="hs-schools">—</div><div class="stat-label">Schools registered</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--amber)">33</div><div class="stat-label">Districts</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:#7C3AED">1–8</div><div class="stat-label">Classes covered</div></div>
+    </div>
+
+    <!-- Portal cards -->
+    <div class="portal-grid">
+      <div class="portal-card" onclick="go('login',null)">
+        <div class="portal-icon" style="background:var(--green-dim)">🎓</div>
+        <div class="portal-title">Student portal</div>
+        <div class="portal-desc">Take your quiz, track your rank and review past attempts.</div>
+        <div class="portal-arrow">↗</div>
+      </div>
+      <div class="portal-card" onclick="go('login',null)">
+        <div class="portal-icon" style="background:var(--blue-dim)">🏫</div>
+        <div class="portal-title">School admin</div>
+        <div class="portal-desc">Register students, monitor live sessions, view results.</div>
+        <div class="portal-arrow">↗</div>
+      </div>
+      <div class="portal-card" onclick="go('login',null)">
+        <div class="portal-icon" style="background:var(--amber-dim)">🏢</div>
+        <div class="portal-title">Company admin</div>
+        <div class="portal-desc">Manage schools, generate AI questions, trigger rounds.</div>
+        <div class="portal-arrow">↗</div>
+      </div>
+      <div class="portal-card" onclick="go('board',document.querySelectorAll('.nav-link')[4])">
+        <div class="portal-icon" style="background:#F0ECFE">🏆</div>
+        <div class="portal-title">Leaderboard</div>
+        <div class="portal-desc">Live rankings by student, school and district.</div>
+        <div class="portal-arrow">↗</div>
+      </div>
+    </div>
+
+    <!-- Scoring -->
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;color:var(--ink3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.4px">How scoring works</div>
+      <div class="grid4" style="margin-bottom:12px">
+        <div class="score-tile" style="background:var(--green-dim)"><div class="score-tile-val" style="color:var(--green-dark)">10 pts</div><div class="score-tile-lbl" style="color:#2E9E7A">Answer in 0–3 sec</div></div>
+        <div class="score-tile" style="background:#DFFAF0"><div class="score-tile-val" style="color:#1A7A5E">7 pts</div><div class="score-tile-lbl" style="color:#2E9E7A">Answer in 3–6 sec</div></div>
+        <div class="score-tile" style="background:var(--amber-dim)"><div class="score-tile-val" style="color:var(--amber)">5 pts</div><div class="score-tile-lbl" style="color:#A06010">Answer in 6–9 sec</div></div>
+        <div class="score-tile" style="background:var(--surface2)"><div class="score-tile-val" style="color:var(--ink3)">3 pts</div><div class="score-tile-lbl" style="color:var(--ink4)">Answer in 9–10 sec</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--ink4);display:flex;flex-wrap:wrap;gap:16px">
+        <span>✕ Wrong answer = −1 point</span>
+        <span>↻ Max 3 reconnect alerts per session</span>
+        <span>⚡ Tiebreaker: total response time</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ LOGIN ═══════════════════ -->
+<div id="pg-login" class="page">
+  <div class="login-split">
+    <!-- Left -->
+    <div class="login-left">
+      <div style="font-size:11px;color:#9FE1CB;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px">GK Championship 2025</div>
+      <h2 style="font-size:30px;font-weight:700;color:#fff;line-height:1.2;letter-spacing:-.5px;margin-bottom:14px">Test your<br>knowledge.<br>Beat the clock.</h2>
+      <p style="font-size:13px;color:#9FE1CB;line-height:1.7;margin-bottom:32px">10 seconds per question. Speed and accuracy both count. Compete school-wide, district-wide, state-wide.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;color:#E5F5F0;font-size:13px"><div style="width:30px;height:30px;background:rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">⚡</div>Speed scoring — faster = more points</div>
+        <div style="display:flex;align-items:center;gap:10px;color:#E5F5F0;font-size:13px"><div style="width:30px;height:30px;background:rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">🏆</div>Compete at school, district &amp; state level</div>
+        <div style="display:flex;align-items:center;gap:10px;color:#E5F5F0;font-size:13px"><div style="width:30px;height:30px;background:rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">📚</div>Questions from your school's GK book</div>
+      </div>
+    </div>
+    <!-- Right -->
+    <div class="login-right">
+      <div class="login-box">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:28px">
+          <div class="nav-logo"></div>
+          <span style="font-size:16px;font-weight:600">QuizChamp</span>
+        </div>
+        <h1 style="font-size:22px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px">Welcome back</h1>
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:22px">Enter the credentials your school sent you.</p>
+        <div class="field"><label class="label">School code</label><input class="input" id="l-code" placeholder="e.g. SCH-2847" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <div class="field"><label class="label">Roll number</label><input class="input" id="l-roll" placeholder="e.g. 2024-05-018" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <div class="field"><label class="label">Password</label><input class="input" type="password" id="l-pass" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <button class="btn btn-primary btn-full" style="padding:11px;font-size:14px;margin-top:2px" onclick="doLogin()" id="login-btn">Sign in</button>
+        <div id="login-err" style="display:none;margin-top:10px" class="alert alert-error"></div>
+        <div class="divider"></div>
+        <div style="font-size:11px;font-weight:600;color:var(--ink4);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Demo accounts — click to fill</div>
+        <div class="demo-row" onclick="fillDemo('SCH-2847','ADMIN001','admin123')">Company admin — SCH-2847 / ADMIN001</div>
+        <div class="demo-row" onclick="fillDemo('SCH-2847','SADMIN001','school123')">School admin — SCH-2847 / SADMIN001</div>
+        <div class="demo-row" onclick="fillDemo('SCH-2847','2024-05-018','quiz8018')">Student — SCH-2847 / 2024-05-018</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ STUDENT ═══════════════════ -->
+<div id="pg-student" class="page">
+<div class="wrap" id="student-wrap">
+
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+    <div>
+      <h1 class="section-h" id="s-welcome">Welcome back</h1>
+      <p style="font-size:13px;color:var(--ink3)" id="s-info"></p>
+    </div>
+    <div style="text-align:right">
+      <div class="strike-row" style="justify-content:flex-end;margin-bottom:3px" id="s-strikes">
+        <div class="strike-dot"></div><div class="strike-dot"></div><div class="strike-dot"></div>
+      </div>
+      <div style="font-size:11px;color:var(--ink4)">reconnect alerts</div>
+    </div>
+  </div>
+
+  <div id="s-alert-wrap"></div>
+
+  <!-- Stats -->
+  <div class="grid3" style="margin-bottom:14px">
+    <div class="stat-card"><div class="stat-val" style="color:var(--green-dark)" id="s-best">—</div><div class="stat-label">Best score</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--blue)" id="s-rank">—</div><div class="stat-label">School rank · <span id="s-of" style="color:var(--ink4)">of —</span></div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--amber)" id="s-attempts">—</div><div class="stat-label">Attempts taken</div></div>
+  </div>
+
+  <!-- Start -->
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:14px;padding:22px 24px">
+    <div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">Ready for your next quiz?</div>
+      <div style="font-size:13px;color:var(--ink3)">Questions from your GK book · 10 seconds each · speed scoring</div>
+    </div>
+    <button class="btn btn-primary btn-lg" style="flex-shrink:0" id="s-start-btn" onclick="beginQuiz()">Start quiz →</button>
+  </div>
+
+  <!-- History -->
+  <div class="card" style="padding:0">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:14px;font-weight:600">Past attempts</div>
+      <div style="font-size:12px;color:var(--ink4)" id="s-hist-label"></div>
+    </div>
+    <div id="s-history"><div class="empty">No attempts yet — take your first quiz!</div></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════ SCHOOL ADMIN ═══════════════════ -->
+<div id="pg-school" class="page">
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+    <div>
+      <h1 class="section-h" id="sch-name">School Admin</h1>
+      <p style="font-size:13px;color:var(--ink3)" id="sch-info"></p>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="schTab('add')">+ Add students</button>
+  </div>
+
+  <div class="grid4" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-val" style="color:var(--green-dark)" id="sch-reg">—</div><div class="stat-label">Registered</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--blue)" id="sch-act">—</div><div class="stat-label">Activated</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--amber)" id="sch-dq">—</div><div class="stat-label">District qualifiers</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#7C3AED" id="sch-sq">—</div><div class="stat-label">State qualifiers</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="schTab('students')">Students</button>
+    <button class="tab-btn" onclick="schTab('add')">Add students</button>
+    <button class="tab-btn" onclick="schTab('live')">Live monitor</button>
+    <button class="tab-btn" onclick="schTab('results')">Results</button>
+  </div>
+
+  <!-- Students tab -->
+  <div class="tab-pane active" id="sch-students">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <input class="input" style="max-width:220px" placeholder="Search name or roll no." id="sch-search" oninput="renderStudents()">
+      <select class="input" style="max-width:120px" id="sch-cls" onchange="renderStudents()">
+        <option value="">All classes</option>
+        <option>1</option><option>2</option><option>3</option><option>4</option>
+        <option>5</option><option>6</option><option>7</option><option>8</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Student</th><th>Class</th><th>Roll</th><th>Stage</th><th>Score</th><th>Alerts</th></tr></thead>
+      <tbody id="sch-tbody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <!-- Add tab -->
+  <div class="tab-pane" id="sch-add">
+    <div class="grid2">
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">Add single student</div>
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:16px">Student will get login credentials to access the quiz.</div>
+        <div class="field"><label class="label">Full name</label><input class="input" id="add-name" placeholder="Student's full name"></div>
+        <div class="grid2" style="gap:10px">
+          <div class="field"><label class="label">Class</label>
+            <select class="input" id="add-class"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option></select>
+          </div>
+          <div class="field"><label class="label">Roll no.</label><input class="input" id="add-roll" placeholder="2024-05-019"></div>
+        </div>
+        <div class="field"><label class="label">Password</label><input class="input" id="add-pass" placeholder="Set their login password"></div>
+        <div class="field"><label class="label">Parent email (optional)</label><input class="input" id="add-email" type="email" placeholder="parent@email.com"></div>
+        <div class="field"><label class="label">Parent phone (optional)</label><input class="input" id="add-phone" placeholder="+91 9XXXXXXXXX"></div>
+        <button class="btn btn-primary" onclick="addStudent()">Register student →</button>
+      </div>
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">Bulk upload (CSV)</div>
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">One student per line:</div>
+        <div style="font-size:11px;color:var(--ink4);background:var(--surface2);border-radius:7px;padding:8px;margin-bottom:12px;font-family:monospace">Name, Class, Roll, Password, Email, Phone</div>
+        <textarea class="input" id="csv-input" rows="7" placeholder="Arjun Kumar,5,2024-05-019,quiz9019,p@email.com,9000000001"></textarea>
+        <button class="btn btn-primary btn-full" style="margin-top:10px" onclick="bulkUpload()">Upload students →</button>
+        <div id="csv-result" style="margin-top:8px;font-size:12px;color:var(--green-dark)"></div>
+      </div>
+    </div>
+    <div class="alert alert-info">Credentials are sent automatically by SMS and email once registered.</div>
+  </div>
+
+  <!-- Live tab -->
+  <div class="tab-pane" id="sch-live">
+    <div class="alert alert-warn">District round is live — monitoring your school's students</div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Student</th><th>Class</th><th>Progress</th><th>Status</th><th>Score</th><th>Alerts</th></tr></thead>
+      <tbody id="live-tbody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody></table>
+    </div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="loadLive()">↻ Refresh</button>
+  </div>
+
+  <!-- Results tab -->
+  <div class="tab-pane" id="sch-results">
+    <div id="sch-results-body"><div class="empty">Loading results...</div></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════ COMPANY ADMIN ═══════════════════ -->
+<div id="pg-company" class="page">
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+    <div>
+      <h1 class="section-h">Company admin</h1>
+      <p style="font-size:13px;color:var(--ink3)">Telangana State · GK Championship 2025</p>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="coTab('rounds')">Manage rounds</button>
+  </div>
+
+  <div class="grid4" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-val" style="color:var(--green-dark)" id="co-sc">—</div><div class="stat-label">Schools</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--blue)" id="co-st">—</div><div class="stat-label">Students</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--amber)" id="co-se">—</div><div class="stat-label">Sessions</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--red)" id="co-fl">—</div><div class="stat-label">Flagged</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="coTab('ai')">AI questions</button>
+    <button class="tab-btn" onclick="coTab('schools')">Schools</button>
+    <button class="tab-btn" onclick="coTab('rounds')">Rounds</button>
+    <button class="tab-btn" onclick="coTab('flags')">Flags &amp; review</button>
+  </div>
+
+  <!-- AI Questions tab -->
+  <div class="tab-pane active" id="co-ai">
+    <div class="grid2">
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:16px">Generate with AI</div>
+        <div class="field"><label class="label">Grade</label>
+          <select class="input" id="ai-cls"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option></select>
+        </div>
+        <div class="field"><label class="label">Topics</label>
+          <div class="chips" id="topic-chips">
+            <div class="chip on" onclick="this.classList.toggle('on')">Indian history</div>
+            <div class="chip on" onclick="this.classList.toggle('on')">Science</div>
+            <div class="chip on" onclick="this.classList.toggle('on')">Geography</div>
+            <div class="chip" onclick="this.classList.toggle('on')">Current affairs</div>
+            <div class="chip on" onclick="this.classList.toggle('on')">Sports</div>
+            <div class="chip" onclick="this.classList.toggle('on')">Art &amp; culture</div>
+            <div class="chip on" onclick="this.classList.toggle('on')">Famous people</div>
+            <div class="chip" onclick="this.classList.toggle('on')">Environment</div>
+          </div>
+        </div>
+        <div class="grid2" style="gap:10px">
+          <div class="field"><label class="label">Count</label><input class="input" type="number" id="ai-count" value="20" min="5" max="50"></div>
+          <div class="field"><label class="label">Difficulty</label><select class="input" id="ai-diff"><option>EASY</option><option selected>MEDIUM</option><option>HARD</option></select></div>
+        </div>
+        <div class="field"><label class="label">Anthropic API key</label><input class="input" id="ai-key" type="password" placeholder="sk-ant-..."></div>
+        <div style="font-size:11px;color:var(--ink4);margin-bottom:12px">Get your key at console.anthropic.com</div>
+        <button class="btn btn-primary btn-full" id="ai-gen-btn" onclick="genQuestions()">✨ Generate questions</button>
+      </div>
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px">Preview &amp; approve</div>
+        <div id="ai-preview"><div class="empty">Questions appear here after generation</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">In database <span style="font-weight:400;color:var(--ink4)" id="q-count"></span></div>
+      <div id="q-list"><div class="empty">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- Schools tab -->
+  <div class="tab-pane" id="co-schools">
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input class="input" style="max-width:220px" placeholder="Search schools..." id="co-sch-search" oninput="renderCoSchools()">
+      <button class="btn btn-primary btn-sm" onclick="showAddSchool()">+ Add school</button>
+    </div>
+    <div id="add-school-wrap" style="display:none;margin-bottom:16px" class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">New school</div>
+      <div class="grid2" style="gap:10px">
+        <div class="field"><label class="label">School name</label><input class="input" id="new-sch-name" placeholder="Full school name"></div>
+        <div class="field"><label class="label">District</label><input class="input" id="new-sch-dist" placeholder="e.g. Hyderabad"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="addSchool()">Add school</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('add-school-wrap').style.display='none'">Cancel</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>School</th><th>District</th><th>Code</th><th>Students</th><th>Status</th></tr></thead>
+      <tbody id="co-sch-tbody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <!-- Rounds tab -->
+  <div class="tab-pane" id="co-rounds">
+    <div class="grid2">
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:16px">Round status</div>
+        <div class="card-section"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:500">School round</span><span class="badge badge-green">Completed</span></div><div style="font-size:12px;color:var(--ink4)" id="rd-school">—</div></div>
+        <div class="card-section"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:500">District round</span><span class="badge badge-amber">Live now</span></div><div style="font-size:12px;color:var(--ink4)" id="rd-district">—</div></div>
+        <div class="card-section"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:500">State round</span><span class="badge badge-blue">Upcoming</span></div><div style="font-size:12px;color:var(--ink4)">Qualifiers TBD</div></div>
+      </div>
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:16px">Create school admin</div>
+        <div class="field"><label class="label">School</label><select class="input" id="new-admin-school"><option value="">Select school...</option></select></div>
+        <div class="field"><label class="label">Admin name</label><input class="input" id="new-admin-name" placeholder="Principal name"></div>
+        <div class="field"><label class="label">Login ID</label><input class="input" id="new-admin-roll" placeholder="PRINCIPAL001"></div>
+        <div class="field"><label class="label">Password</label><input class="input" id="new-admin-pass" placeholder="Set password"></div>
+        <button class="btn btn-primary btn-sm" onclick="addSchoolAdmin()">Create admin account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flags tab -->
+  <div class="tab-pane" id="co-flags">
+    <div id="flags-alert" class="alert alert-warn">Loading flagged cases...</div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Student</th><th>School</th><th>Reason</th><th>Alerts</th><th>Action</th></tr></thead>
+      <tbody id="flags-tbody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody></table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════ LEADERBOARD ═══════════════════ -->
+<div id="pg-board" class="page">
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+    <div>
+      <h1 class="section-h" style="display:flex;align-items:center;gap:8px">Live leaderboard <div class="nav-badge" style="margin:0"><div class="nav-badge-dot"></div>live</div></h1>
+      <p style="font-size:13px;color:var(--ink3)">District round · refreshes every 30s</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select class="input" style="max-width:140px" id="lb-district" onchange="loadLeaderboard()"><option>Hyderabad</option><option>Warangal</option><option>All</option></select>
+      <select class="input" style="max-width:110px" id="lb-class" onchange="loadLeaderboard()"><option value="">All classes</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+      <button class="btn btn-secondary btn-sm" onclick="loadLeaderboard()">↻ Refresh</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div style="font-size:12px;font-weight:600;color:var(--ink4);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Top students</div>
+      <div id="lb-students"><div class="empty">Loading...</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:12px;font-weight:600;color:var(--ink4);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Top schools</div>
+      <div id="lb-schools"><div class="empty">Loading...</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- QUIZ OVERLAY -->
+<div id="quiz-ov" class="quiz-overlay">
+  <div class="quiz-header">
+    <div>
+      <div class="quiz-meta" id="qn-txt">Question 1 of 30</div>
+      <div class="quiz-sub">District round · Class 5</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div><div class="quiz-score-val" id="q-sc">0</div><div class="quiz-score-lbl">points</div></div>
+      <div class="timer-wrap">
+        <svg class="timer-svg" viewBox="0 0 52 52">
+          <circle class="timer-track" cx="26" cy="26" r="21"/>
+          <circle class="timer-arc" cx="26" cy="26" r="21" id="tarc"/>
+        </svg>
+        <div class="timer-num" id="tnum">10</div>
+      </div>
+    </div>
+  </div>
+  <div class="quiz-progress"><div class="quiz-progress-fill" id="qpfill" style="width:3%"></div></div>
+  <div class="quiz-notice">🔒 Session secured · tab switching monitored · timer runs server-side</div>
+  <div class="quiz-body">
+    <div class="quiz-inner">
+      <div class="question-card">
+        <div class="question-text" id="qtxt">Loading question...</div>
+        <div class="options-grid" id="qopts"></div>
+        <div class="quiz-hint">Answer faster for more points · wrong answers cost 1 point</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL = 'https://flpuunexvfdcjsexkiop.supabase.co'
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZscHV1bmV4dmZkY2pzZXhraW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0OTEyNTksImV4cCI6MjA5NDA2NzI1OX0.Q3Di4Rp7i5FQ4dZIjCPvWyESf4ypNG8Yfaf3l4NGRxA'
+const sb = supabase.createClient(SB_URL, SB_KEY)
+
+var CU=null, SESS=null, QS=[], qIdx=0, sc=0, correctCount=0, tiv=null, tl=10, locked=false
+var ALL_STUDENTS=[], ALL_SCHOOLS=[]
+
+/* ── Helpers ───────────────────────── */
+function toast(msg, type) {
+  var t = document.getElementById('toast')
+  t.textContent = msg; t.className = 'toast '+(type||'')+' show'
+  setTimeout(function(){ t.classList.remove('show') }, 3000)
+}
+
+function fillDemo(code, roll, pass) {
+  document.getElementById('l-code').value = code
+  document.getElementById('l-roll').value = roll
+  document.getElementById('l-pass').value = pass
+}
+
+function go(pg, btn) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('show') })
+  var el = document.getElementById('pg-'+pg)
+  if (el) el.classList.add('show')
+  document.querySelectorAll('.nav-link').forEach(function(l){ l.classList.remove('active') })
+  if (btn) btn.classList.add('active')
+  window.scrollTo(0,0)
+  if (pg==='board') loadLeaderboard()
+  if (pg==='school') loadSchoolData()
+  if (pg==='company') loadCompanyData()
+}
+
+/* ── Auth ──────────────────────────── */
+async function doLogin() {
+  var code = document.getElementById('l-code').value.trim().toUpperCase()
+  var roll = document.getElementById('l-roll').value.trim()
+  var pass = document.getElementById('l-pass').value.trim()
+  if (!code||!roll||!pass) { toast('Fill all fields','error'); return }
+  var btn = document.getElementById('login-btn')
+  btn.textContent = 'Signing in...'; btn.disabled = true
+  document.getElementById('login-err').style.display = 'none'
+  var r1 = await sb.from('schools').select('*').eq('code', code).single()
+  if (!r1.data) { loginErr('School code not found'); return }
+  var r2 = await sb.from('users').select('*').eq('school_id', r1.data.id).eq('roll_no', roll).single()
+  if (!r2.data) { loginErr('Roll number not found'); return }
+  if (r2.data.password !== pass) { loginErr('Incorrect password'); return }
+  CU = Object.assign({}, r2.data, { school: r1.data })
+  btn.textContent = 'Sign in'; btn.disabled = false
+  afterLogin()
+}
+
+function loginErr(msg) {
+  var el = document.getElementById('login-err')
+  el.textContent = msg; el.style.display = 'flex'
+  document.getElementById('login-btn').textContent = 'Sign in'
+  document.getElementById('login-btn').disabled = false
+}
+
+function afterLogin() {
+  document.getElementById('btn-login').style.display = 'none'
+  document.getElementById('btn-logout').style.display = 'flex'
+  if (CU.role==='STUDENT') {
+    document.getElementById('nl-student').style.display = 'flex'
+    go('student', document.getElementById('nl-student')); loadStudentDash()
+  } else if (CU.role==='SCHOOL_ADMIN') {
+    document.getElementById('nl-school').style.display = 'flex'
+    go('school', document.getElementById('nl-school'))
+  } else if (CU.role==='COMPANY_ADMIN') {
+    document.getElementById('nl-company').style.display = 'flex'
+    go('company', document.getElementById('nl-company'))
+  }
+  loadHomeStats()
+}
+
+function logout() {
+  CU = null
+  ;['nl-student','nl-school','nl-company'].forEach(function(id){ document.getElementById(id).style.display='none' })
+  document.getElementById('btn-login').style.display = 'flex'
+  document.getElementById('btn-logout').style.display = 'none'
+  go('home', document.querySelector('.nav-link'))
+}
+
+/* ── Home ──────────────────────────── */
+async function loadHomeStats() {
+  var r1 = await sb.from('schools').select('*',{count:'exact',head:true})
+  var r2 = await sb.from('users').select('*',{count:'exact',head:true}).eq('role','STUDENT')
+  document.getElementById('hs-students').textContent = (r2.count||0).toLocaleString()
+  document.getElementById('hs-schools').textContent = r1.count||0
+}
+
+/* ── Student dash ──────────────────── */
+async function loadStudentDash() {
+  // Reset wrap in case we're returning from result screen
+  var wrap = document.getElementById('student-wrap')
+  if (!document.getElementById('s-welcome')) location.reload()
+
+  document.getElementById('s-welcome').textContent = 'Welcome back, '+CU.name.split(' ')[0]
+  document.getElementById('s-info').textContent = 'Class '+CU.class+' · '+CU.school.name+' · '+CU.roll_no
+
+  var res = await sb.from('quiz_sessions').select('*').eq('user_id', CU.id).order('started_at',{ascending:false})
+  var sessions = res.data||[]
+  var completed = sessions.filter(function(s){ return s.status==='COMPLETED' })
+  var latest = sessions[0]
+  var strikes = latest ? (latest.strike_count||0) : 0
+
+  // Strikes
+  document.getElementById('s-strikes').querySelectorAll('.strike-dot').forEach(function(d,i){
+    d.className = 'strike-dot'+(i<strikes?' hit':'')
+  })
+
+  // Stats
+  document.getElementById('s-attempts').textContent = completed.length||'0'
+  document.getElementById('s-hist-label').textContent = completed.length+' completed'
+
+  if (completed.length) {
+    var best = completed.reduce(function(a,b){ return a.score>b.score?a:b })
+    document.getElementById('s-best').textContent = best.score
+    var rk = await sb.from('quiz_sessions').select('*',{count:'exact',head:true}).eq('school_id',CU.school_id).eq('status','COMPLETED').gt('score',best.score)
+    var tot = await sb.from('users').select('*',{count:'exact',head:true}).eq('school_id',CU.school_id).eq('role','STUDENT')
+    document.getElementById('s-rank').textContent = '#'+((rk.count||0)+1)
+    document.getElementById('s-of').textContent = 'of '+(tot.count||'—')
+  }
+
+  if (strikes>=2) {
+    document.getElementById('s-alert-wrap').innerHTML = '<div class="alert alert-warn">⚠️ You have '+strikes+' reconnection alert(s). One more ends your participation. Use stable internet.</div>'
+  }
+
+  // History
+  var hist = document.getElementById('s-history')
+  if (!completed.length) {
+    hist.innerHTML = '<div class="empty">No attempts yet — take your first quiz!</div>'
+    return
+  }
+  hist.innerHTML = completed.map(function(s,i){
+    var d = new Date(s.started_at)
+    var dateStr = d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})
+    var timeStr = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})
+    var isNew = i===0
+    return '<div style="display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background=\'#FAFAF8\'" onmouseout="this.style.background=\'\'">'
+      +'<div style="width:34px;height:34px;border-radius:9px;background:'+(isNew?'var(--green-dim)':'var(--surface2)')+';color:'+(isNew?'var(--green-dark)':'var(--ink3)')+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">'+(i+1)+'</div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:13px;font-weight:500;margin-bottom:1px">'+s.round+' round'+(isNew?' <span style="font-size:10px;color:var(--green-dark);background:var(--green-dim);padding:1px 6px;border-radius:4px;font-weight:500">Latest</span>':'')+'</div>'
+        +'<div style="font-size:11px;color:var(--ink4)">'+dateStr+' · '+timeStr+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;margin-right:8px">'
+        +'<div style="font-size:16px;font-weight:600;color:var(--green-dark)">'+s.score+' pts</div>'
+        +'<div style="font-size:11px;color:var(--ink4)">'+(s.status==='DISQUALIFIED'?'<span style="color:var(--red)">Removed</span>':'Completed')+'</div>'
+      +'</div>'
+      +'<button class="btn btn-secondary btn-sm" onclick="viewAttempt(\''+s.id+'\')">Review →</button>'
+    +'</div>'
+  }).join('')
+}
+
+async function viewAttempt(sessionId) {
+  var wrap = document.getElementById('student-wrap')
+  wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);font-size:13px">Loading...</div>'
+  var sRes = await sb.from('quiz_sessions').select('*').eq('id',sessionId).single()
+  var s = sRes.data
+  var aRes = await sb.from('answers').select('*, questions(text,option_a,option_b,option_c,option_d,correct,topic)').eq('session_id',sessionId).order('answered_at')
+  renderResultPage(s, aRes.data||[], false)
+}
+
+/* ── Quiz ──────────────────────────── */
+async function beginQuiz() {
+  var btn = document.getElementById('s-start-btn')
+  btn.textContent = 'Starting...'; btn.disabled = true
+  var res = await sb.from('quiz_sessions').select('*').eq('user_id',CU.id).eq('round','DISTRICT').maybeSingle()
+  var ex = res.data
+  if (ex&&ex.status==='COMPLETED') { toast('Already completed this round!','error'); btn.textContent='Start quiz →'; btn.disabled=false; return }
+  if (ex&&ex.status==='DISQUALIFIED') { toast('You were removed from this round.','error'); btn.textContent='Start quiz →'; btn.disabled=false; return }
+  var session = ex
+  if (!session) {
+    var ins = await sb.from('quiz_sessions').insert({user_id:CU.id,school_id:CU.school_id,round:'DISTRICT',class:CU.class,district:CU.school.district,status:'IN_PROGRESS'}).select().single()
+    if (ins.error) { toast('Could not start: '+ins.error.message,'error'); btn.textContent='Start quiz →'; btn.disabled=false; return }
+    session = ins.data
+  }
+  SESS = session
+  var answered = await sb.from('answers').select('question_id').eq('session_id',SESS.id)
+  var answeredIds = new Set((answered.data||[]).map(function(a){ return a.question_id }))
+  var qres = await sb.from('questions').select('*').eq('class',CU.class).eq('approved',true).limit(50)
+  var allQs = qres.data||[]
+  if (!allQs.length) { toast('No questions for Class '+CU.class+'. Ask company admin first.','error'); btn.textContent='Start quiz →'; btn.disabled=false; return }
+  QS = allQs.filter(function(q){ return !answeredIds.has(q.id) }).slice(0,30)
+  if (!QS.length) { toast('All questions answered already!'); btn.textContent='Start quiz →'; btn.disabled=false; return }
+  qIdx=0; sc=SESS.score; correctCount=0; locked=false
+  btn.textContent='Start quiz →'; btn.disabled=false
+  document.getElementById('quiz-ov').classList.add('show')
+  if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function(){})
+  setupAntiCheat(); loadQ()
+}
+
+function loadQ() {
+  if (qIdx>=QS.length) { endQuiz(); return }
+  locked = false
+  var q = QS[qIdx]
+  document.getElementById('qn-txt').textContent = 'Question '+(qIdx+1)+' of '+QS.length
+  document.getElementById('qpfill').style.width = Math.round(((qIdx+1)/QS.length)*100)+'%'
+  document.getElementById('q-sc').textContent = sc
+  document.getElementById('qtxt').textContent = q.text
+  var opts=[q.option_a,q.option_b,q.option_c,q.option_d], keys=['A','B','C','D']
+  var el=document.getElementById('qopts'); el.innerHTML=''
+  opts.forEach(function(o,i){
+    var btn=document.createElement('button'); btn.className='option'
+    btn.innerHTML='<div class="option-key">'+keys[i]+'</div>'+o
+    btn.onclick=function(){ pickOpt(btn,i,q) }
+    el.appendChild(btn)
+  })
+  runTimer()
+}
+
+function runTimer() {
+  clearInterval(tiv); tl=10; drawTimer()
+  tiv=setInterval(function(){ tl--; drawTimer(); if(tl<=0){ clearInterval(tiv); submitAnswer(null,QS[qIdx]) } },1000)
+}
+
+function drawTimer() {
+  var arc=document.getElementById('tarc'), tn=document.getElementById('tnum')
+  arc.style.strokeDashoffset=(132*(1-tl/10)).toFixed(1)
+  arc.className='timer-arc'+(tl<=3?' warn':'')
+  tn.textContent=tl; tn.className='timer-num'+(tl<=3?' warn':'')
+}
+
+function pickOpt(el,idx,q) {
+  if (locked) return; locked=true; clearInterval(tiv)
+  document.querySelectorAll('.option').forEach(function(o){ o.disabled=true })
+  el.classList.add('selected')
+  setTimeout(function(){
+    el.classList.remove('selected')
+    var won=idx===q.correct
+    el.classList.add(won?'correct':'wrong')
+    if (!won) { var c=document.querySelectorAll('.option')[q.correct]; if(c) c.classList.add('correct') }
+    submitAnswer(idx,q)
+  },250)
+}
+
+async function submitAnswer(chosen,q) {
+  var ms=(10-tl)*1000, isCorrect=chosen!==null&&chosen===q.correct, pts=0
+  if (isCorrect){ pts=tl>=7?10:tl>=4?7:tl>=1?5:3; sc+=pts; correctCount++ }
+  else if (chosen!==null){ pts=-1; sc=Math.max(0,sc-1) }
+  document.getElementById('q-sc').textContent=sc
+  await sb.from('answers').upsert({session_id:SESS.id,user_id:CU.id,question_id:q.id,chosen:chosen,is_correct:isCorrect,response_ms:ms,points:pts},{onConflict:'session_id,question_id'})
+  await sb.from('quiz_sessions').update({score:sc,current_q:qIdx+1}).eq('id',SESS.id)
+  setTimeout(function(){ qIdx++; loadQ() },chosen===null?300:800)
+}
+
+async function endQuiz() {
+  clearInterval(tiv)
+  await sb.from('quiz_sessions').update({status:'COMPLETED',completed_at:new Date().toISOString()}).eq('id',SESS.id)
+  document.getElementById('quiz-ov').classList.remove('show')
+  if (document.exitFullscreen&&document.fullscreenElement) document.exitFullscreen()
+  var rk = await sb.from('quiz_sessions').select('*',{count:'exact',head:true}).eq('round','DISTRICT').eq('district',CU.school.district).eq('class',CU.class).eq('status','COMPLETED').gt('score',sc)
+  var rank=(rk.count||0)+1
+  var aRes = await sb.from('answers').select('*, questions(text,option_a,option_b,option_c,option_d,correct,topic)').eq('session_id',SESS.id).order('answered_at')
+  renderResultPage({score:sc,round:'DISTRICT',class:CU.class,district:CU.school.district,started_at:new Date().toISOString()}, aRes.data||[], true, rank)
+}
+
+function renderResultPage(s, answers, isNew, rank) {
+  var wrap = document.getElementById('student-wrap')
+  var qualifies = rank&&rank<=3
+  var keys=['A','B','C','D']
+  var correct=answers.filter(function(a){ return a.is_correct }).length
+  var wrong=answers.filter(function(a){ return !a.is_correct&&a.chosen!==null }).length
+  var skipped=answers.filter(function(a){ return a.chosen===null }).length
+
+  var rows = answers.map(function(a,i){
+    var q=a.questions; if(!q) return ''
+    var opts=[q.option_a,q.option_b,q.option_c,q.option_d]
+    var to=a.chosen===null
+    var ic=to?'⏱':a.is_correct?'✓':'✗'
+    var ibg=to?'var(--surface2)':a.is_correct?'var(--green-dim)':'var(--red-dim)'
+    var icol=to?'var(--ink4)':a.is_correct?'var(--green-dark)':'var(--red)'
+    var optsHtml=opts.map(function(o,oi){
+      var isC=oi===q.correct, isCh=oi===a.chosen
+      var cls='breakdown-opt'+(isC?' correct':'')+(isCh&&!a.is_correct?' wrong':'')
+      return '<div class="'+cls+'"><span style="font-size:10px;font-weight:700;font-family:monospace;opacity:.7">'+keys[oi]+'</span>'+o+(isC?' ✓':'')+(isCh&&!a.is_correct?' ✗':'')+'</div>'
+    }).join('')
+    var ptCol=a.points>0?'var(--green-dark)':a.points<0?'var(--red)':'var(--ink4)'
+    return '<div class="breakdown-row">'
+      +'<div class="breakdown-icon" style="background:'+ibg+';color:'+icol+'">'+ic+'</div>'
+      +'<div style="flex:1">'
+        +'<div style="font-size:11px;color:var(--ink4);margin-bottom:3px">Q'+(i+1)+(q.topic?' · '+q.topic:'')+(a.response_ms>0?' · '+(a.response_ms/1000).toFixed(1)+'s':' · timed out')+'</div>'
+        +'<div style="font-size:14px;font-weight:500;line-height:1.4;margin-bottom:8px">'+q.text+'</div>'
+        +'<div class="breakdown-opts">'+optsHtml+'</div>'
+      +'</div>'
+      +'<div style="font-size:14px;font-weight:600;color:'+ptCol+';flex-shrink:0;margin-left:10px">'+(a.points>0?'+':'')+a.points+' pts</div>'
+    +'</div>'
+  }).join('')
+
+  wrap.innerHTML =
+    '<div style="max-width:640px;margin:0 auto">'
+    +'<button class="btn btn-secondary btn-sm" style="margin-bottom:16px" onclick="go(\'student\',document.getElementById(\'nl-student\'));loadStudentDash()">← Dashboard</button>'
+
+    // Score hero
+    +'<div class="card" style="text-align:center;padding:32px;margin-bottom:12px">'
+      +'<div style="font-size:12px;color:var(--ink4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">'+(isNew?'Quiz complete':'Past attempt — '+new Date(s.started_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}))+'</div>'
+      +'<div style="font-size:56px;font-weight:700;color:var(--green-dark);letter-spacing:-2px;line-height:1">'+s.score+'</div>'
+      +'<div style="font-size:13px;color:var(--ink4);margin-top:6px;margin-bottom:22px">points</div>'
+      +'<div class="grid4" style="margin-bottom:'+(isNew?'20':'0')+'px">'
+        +'<div class="stat-card"><div class="stat-val" style="color:var(--green-dark);font-size:20px">'+correct+'</div><div class="stat-label">Correct</div></div>'
+        +'<div class="stat-card"><div class="stat-val" style="color:var(--red);font-size:20px">'+wrong+'</div><div class="stat-label">Wrong</div></div>'
+        +'<div class="stat-card"><div class="stat-val" style="color:var(--ink4);font-size:20px">'+skipped+'</div><div class="stat-label">Skipped</div></div>'
+        +'<div class="stat-card"><div class="stat-val" style="color:var(--blue);font-size:20px">'+(rank?'#'+rank:'—')+'</div><div class="stat-label">Rank</div></div>'
+      +'</div>'
+      +(isNew?(qualifies
+        ?'<div class="alert alert-success" style="text-align:left;margin-bottom:0">🏆 You qualify for the next round! Notification within 48 hours.</div>'
+        :'<div class="alert alert-info" style="text-align:left;margin-bottom:0">Your score has been saved. Keep practising!</div>')
+      :'')
+    +'</div>'
+
+    // Breakdown
+    +'<div class="card" style="padding:0;margin-bottom:16px">'
+      +'<div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'
+        +'<div style="font-size:14px;font-weight:600">Question breakdown</div>'
+        +'<div style="font-size:12px;color:var(--ink4)">'+answers.length+' questions</div>'
+      +'</div>'
+      +(rows||'<div class="empty">No answers found</div>')
+    +'</div>'
+    +'</div>'
+}
+
+function setupAntiCheat() {
+  document.addEventListener('visibilitychange', async function(){
+    if (document.hidden&&SESS) {
+      await sb.from('reconnect_logs').insert({session_id:SESS.id,user_id:CU.id,reason:'TAB_SWITCH'})
+      var r=await sb.from('quiz_sessions').select('strike_count').eq('id',SESS.id).single()
+      var st=((r.data&&r.data.strike_count)||0)+1
+      await sb.from('quiz_sessions').update({strike_count:st}).eq('id',SESS.id)
+      if (st>=3) {
+        await sb.from('quiz_sessions').update({status:'DISQUALIFIED'}).eq('id',SESS.id)
+        document.getElementById('quiz-ov').classList.remove('show')
+        toast('Removed: 3 tab-switch alerts.','error')
+      } else toast('Tab-switch alert '+st+'/3','error')
+    }
+  })
+}
+
+/* ── School admin ──────────────────── */
+async function loadSchoolData() {
+  if (!CU) return
+  document.getElementById('sch-name').textContent = CU.school.name
+  document.getElementById('sch-info').textContent = 'Code: '+CU.school.code+' · '+CU.school.district
+  var r1=await sb.from('users').select('*',{count:'exact',head:true}).eq('school_id',CU.school_id).eq('role','STUDENT')
+  var r2=await sb.from('quiz_sessions').select('*',{count:'exact',head:true}).eq('school_id',CU.school_id).eq('round','DISTRICT').eq('status','COMPLETED')
+  var r3=await sb.from('quiz_sessions').select('*',{count:'exact',head:true}).eq('school_id',CU.school_id).eq('round','STATE')
+  var r4=await sb.from('users').select('*, quiz_sessions(*)').eq('school_id',CU.school_id).eq('role','STUDENT').order('name')
+  document.getElementById('sch-reg').textContent=r1.count||0
+  document.getElementById('sch-act').textContent=r1.count||0
+  document.getElementById('sch-dq').textContent=r2.count||0
+  document.getElementById('sch-sq').textContent=r3.count||0
+  ALL_STUDENTS=r4.data||[]; renderStudents()
+}
+
+function renderStudents() {
+  var srch=(document.getElementById('sch-search').value||'').toLowerCase()
+  var cls=document.getElementById('sch-cls').value
+  var f=ALL_STUDENTS.filter(function(s){ return (!srch||s.name.toLowerCase().includes(srch)||s.roll_no.includes(srch))&&(!cls||s.class==cls) })
+  var stMap={IN_PROGRESS:'badge-amber',COMPLETED:'badge-green',DISQUALIFIED:'badge-red',DISCONNECTED:'badge-red'}
+  var tb=document.getElementById('sch-tbody')
+  if (!f.length){ tb.innerHTML='<tr><td colspan="6" class="empty">No students found</td></tr>'; return }
+  tb.innerHTML=f.map(function(s){
+    var sess=(s.quiz_sessions||[]).sort(function(a,b){ return new Date(b.started_at)-new Date(a.started_at) })[0]
+    var badge=sess?'<span class="badge '+(stMap[sess.status]||'badge-gray')+'">'+sess.round+'</span>':'—'
+    var dots='<div class="strike-row">'+[0,1,2].map(function(i){ return '<div class="strike-dot'+(i<(sess?sess.strike_count:0)?' hit':'')+'"></div>' }).join('')+'</div>'
+    return '<tr><td style="font-weight:500">'+s.name+'</td><td>'+s.class+'</td><td style="font-family:monospace;font-size:12px;color:var(--ink4)">'+s.roll_no+'</td><td>'+badge+'</td><td style="font-weight:500;color:var(--green-dark)">'+(sess?sess.score:'—')+'</td><td>'+dots+'</td></tr>'
+  }).join('')
+}
+
+function schTab(name) {
+  document.querySelectorAll('#pg-school .tab-btn').forEach(function(t,i){
+    var names=['students','add','live','results']
+    t.classList.toggle('active',names[i]===name)
+  })
+  ;['students','add','live','results'].forEach(function(id){
+    var el=document.getElementById('sch-'+id)
+    if(el){ el.classList.toggle('active',id===name) }
+  })
+  if (name==='live') loadLive()
+  if (name==='results') loadSchResults()
+}
+
+async function loadLive() {
+  var res=await sb.from('users').select('*, quiz_sessions(*)').eq('school_id',CU.school_id).eq('role','STUDENT')
+  var tb=document.getElementById('live-tbody')
+  var active=(res.data||[]).filter(function(s){ return (s.quiz_sessions||[]).some(function(ss){ return ss.status==='IN_PROGRESS' }) })
+  if (!active.length){ tb.innerHTML='<tr><td colspan="6" class="empty">No students in a live session right now</td></tr>'; return }
+  tb.innerHTML=active.map(function(s){
+    var sess=s.quiz_sessions.find(function(ss){ return ss.status==='IN_PROGRESS' })
+    var pct=Math.round((sess.current_q/30)*100)
+    return '<tr><td style="font-weight:500">'+s.name+'</td><td>'+s.class+'</td><td><div style="display:flex;align-items:center;gap:6px"><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div><span style="font-size:11px;color:var(--ink4)">Q'+sess.current_q+'/30</span></div></td><td><span class="badge badge-green">Online</span></td><td style="font-weight:500;color:var(--green-dark)">'+sess.score+'</td><td><span class="badge badge-amber">'+sess.strike_count+'</span></td></tr>'
+  }).join('')
+}
+
+async function loadSchResults() {
+  var res=await sb.from('quiz_sessions').select('*, users(name,roll_no,class)').eq('school_id',CU.school_id).eq('status','COMPLETED').order('score',{ascending:false}).limit(20)
+  var el=document.getElementById('sch-results-body')
+  if (!res.data||!res.data.length){ el.innerHTML='<div class="empty">No completed sessions yet</div>'; return }
+  var rkCls=['lb-1','lb-2','lb-3']
+  el.innerHTML='<div class="card" style="padding:0">'+res.data.map(function(s,i){
+    return '<div class="lb-row" style="padding:10px 16px"><div class="lb-rank '+(rkCls[i]||'lb-n')+'">'+(i+1)+'</div><div class="lb-info"><div class="lb-name">'+s.users.name+'</div><div class="lb-sub">Class '+s.users.class+' · '+s.round+'</div></div><div class="lb-score">'+s.score+'</div></div>'
+  }).join('')+'</div>'
+}
+
+async function addStudent() {
+  var name=document.getElementById('add-name').value.trim()
+  var cls=parseInt(document.getElementById('add-class').value)
+  var roll=document.getElementById('add-roll').value.trim()
+  var pass=document.getElementById('add-pass').value.trim()
+  var email=document.getElementById('add-email').value.trim()
+  var phone=document.getElementById('add-phone').value.trim()
+  if (!name||!roll||!pass){ toast('Name, roll no. and password required','error'); return }
+  var res=await sb.from('users').insert({name:name,class:cls,roll_no:roll,password:pass,role:'STUDENT',activated:true,school_id:CU.school_id,parent_email:email||null,parent_phone:phone||null})
+  if (res.error){ toast(res.error.code==='23505'?'Roll number already exists':res.error.message,'error'); return }
+  toast(name+' registered!','success')
+  ;['add-name','add-roll','add-pass','add-email','add-phone'].forEach(function(id){ document.getElementById(id).value='' })
+  loadSchoolData()
+}
+
+async function bulkUpload() {
+  var csv=document.getElementById('csv-input').value.trim()
+  if (!csv){ toast('Paste CSV data first','error'); return }
+  var lines=csv.split('\n').filter(function(l){ return l.trim() })
+  var ok=0,fail=0
+  for (var i=0;i<lines.length;i++){
+    var p=lines[i].split(',').map(function(s){ return s.trim() })
+    var name=p[0],cls=p[1],roll=p[2],pass=p[3],email=p[4],phone=p[5]
+    if (!name||!cls||!roll||!pass){ fail++; continue }
+    var r=await sb.from('users').insert({name:name,class:parseInt(cls),roll_no:roll,password:pass,role:'STUDENT',activated:true,school_id:CU.school_id,parent_email:email||null,parent_phone:phone||null})
+    if (r.error) fail++; else ok++
+  }
+  document.getElementById('csv-result').textContent=ok+' added, '+fail+' failed'
+  if (ok>0){ toast(ok+' students registered!','success'); loadSchoolData() }
+}
+
+/* ── Company admin ─────────────────── */
+async function loadCompanyData() {
+  var r1=await sb.from('schools').select('*',{count:'exact',head:true})
+  var r2=await sb.from('users').select('*',{count:'exact',head:true}).eq('role','STUDENT')
+  var r3=await sb.from('quiz_sessions').select('*',{count:'exact',head:true})
+  var r4=await sb.from('reconnect_logs').select('*',{count:'exact',head:true}).eq('cleared',false)
+  var r5=await sb.from('schools').select('*').order('name')
+  document.getElementById('co-sc').textContent=r1.count||0
+  document.getElementById('co-st').textContent=(r2.count||0).toLocaleString()
+  document.getElementById('co-se').textContent=r3.count||0
+  document.getElementById('co-fl').textContent=r4.count||0
+  ALL_SCHOOLS=r5.data||[]; renderCoSchools(); loadRoundStats(); loadFlags(); loadQList()
+  var sel=document.getElementById('new-admin-school')
+  sel.innerHTML='<option value="">Select school...</option>'+ALL_SCHOOLS.map(function(s){ return '<option value="'+s.id+'">'+s.name+' ('+s.code+')</option>' }).join('')
+}
+
+function coTab(name) {
+  var names=['ai','schools','rounds','flags']
+  document.querySelectorAll('#pg-company .tab-btn').forEach(function(t,i){ t.classList.toggle('active',names[i]===name) })
+  names.forEach(function(id){
+    var el=document.getElementById('co-'+id)
+    if(el) el.classList.toggle('active',id===name)
+  })
+}
+
+function renderCoSchools() {
+  var srch=(document.getElementById('co-sch-search')?document.getElementById('co-sch-search').value:'').toLowerCase()
+  var f=ALL_SCHOOLS.filter(function(s){ return !srch||s.name.toLowerCase().includes(srch) })
+  var tb=document.getElementById('co-sch-tbody')
+  if (!f.length){ tb.innerHTML='<tr><td colspan="5" class="empty">No schools found</td></tr>'; return }
+  tb.innerHTML=f.map(function(s){ return '<tr><td style="font-weight:500">'+s.name+'</td><td>'+s.district+'</td><td style="font-family:monospace;font-size:12px;color:var(--ink4)">'+s.code+'</td><td>—</td><td><span class="badge badge-green">'+s.status+'</span></td></tr>' }).join('')
+}
+
+async function loadRoundStats() {
+  var r1=await sb.from('quiz_sessions').select('*',{count:'exact',head:true}).eq('round','SCHOOL').eq('status','COMPLETED')
+  var r2=await sb.from('quiz_sessions').select('*',{count:'exact',head:true}).eq('round','DISTRICT')
+  document.getElementById('rd-school').textContent=(r1.count||0)+' sessions completed'
+  document.getElementById('rd-district').textContent=(r2.count||0)+' sessions started'
+}
+
+async function loadQList() {
+  var res=await sb.from('questions').select('id,class,topic,difficulty,text',{count:'exact'}).eq('approved',true).order('class').limit(10)
+  document.getElementById('q-count').textContent='('+( res.count||0)+' total)'
+  var el=document.getElementById('q-list')
+  if (!res.data||!res.data.length){ el.innerHTML='<div class="empty">No questions yet — generate some above.</div>'; return }
+  el.innerHTML=res.data.map(function(q){
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px"><div><span class="badge badge-gray" style="margin-right:6px">Class '+q.class+'</span>'+q.text.substring(0,65)+(q.text.length>65?'...':'')+'</div><span class="badge badge-amber">'+q.difficulty+'</span></div>'
+  }).join('')+(res.count>10?'<div style="font-size:12px;color:var(--ink4);padding-top:8px">...and '+(res.count-10)+' more</div>':'')
+}
+
+async function loadFlags() {
+  var res=await sb.from('reconnect_logs').select('*, users(name), quiz_sessions(strike_count)').eq('cleared',false).order('created_at',{ascending:false}).limit(20)
+  var tb=document.getElementById('flags-tbody')
+  var alertEl=document.getElementById('flags-alert')
+  if (!res.data||!res.data.length){
+    tb.innerHTML='<tr><td colspan="5" class="empty">No flagged cases — all clear ✓</td></tr>'
+    alertEl.textContent='All clear — no flagged cases'
+    alertEl.className='alert alert-success'; return
+  }
+  alertEl.textContent=res.data.length+' flagged case(s). Review before publishing results.'
+  alertEl.className='alert alert-warn'
+  var labels={TAB_SWITCH:'Tab switched',FULLSCREEN_EXIT:'Exited fullscreen',IP_CHANGE:'IP changed',PING_LOSS:'Network drop (genuine)',MANUAL_CLOSE:'Browser closed'}
+  var vars={TAB_SWITCH:'badge-red',FULLSCREEN_EXIT:'badge-amber',IP_CHANGE:'badge-amber',PING_LOSS:'badge-blue',MANUAL_CLOSE:'badge-gray'}
+  tb.innerHTML=res.data.map(function(f){
+    var st=f.quiz_sessions?f.quiz_sessions.strike_count:0
+    return '<tr><td style="font-weight:500">'+(f.users?f.users.name:'—')+'</td><td>—</td><td><span class="badge '+(vars[f.reason]||'badge-gray')+'">'+(labels[f.reason]||f.reason)+'</span></td><td><div class="strike-row">'+[0,1,2].map(function(i){ return '<div class="strike-dot'+(i<st?' hit':'')+'"></div>' }).join('')+'</div></td><td><button class="btn btn-secondary btn-sm" onclick="clearFlag(\''+f.id+'\',this)">Clear</button></td></tr>'
+  }).join('')
+}
+
+async function clearFlag(id,btn) {
+  btn.textContent='...'
+  await sb.from('reconnect_logs').update({cleared:true}).eq('id',id)
+  toast('Flag cleared','success'); loadFlags(); loadCompanyData()
+}
+
+function showAddSchool(){ document.getElementById('add-school-wrap').style.display='block' }
+
+async function addSchool() {
+  var name=document.getElementById('new-sch-name').value.trim()
+  var dist=document.getElementById('new-sch-dist').value.trim()
+  if (!name||!dist){ toast('Name and district required','error'); return }
+  var code='SCH-'+Math.floor(1000+Math.random()*9000)
+  var res=await sb.from('schools').insert({name:name,code:code,district:dist})
+  if (res.error){ toast(res.error.message,'error'); return }
+  toast('School added! Code: '+code,'success')
+  document.getElementById('add-school-wrap').style.display='none'
+  document.getElementById('new-sch-name').value=''
+  document.getElementById('new-sch-dist').value=''
+  loadCompanyData()
+}
+
+async function addSchoolAdmin() {
+  var sid=document.getElementById('new-admin-school').value
+  var name=document.getElementById('new-admin-name').value.trim()
+  var roll=document.getElementById('new-admin-roll').value.trim()
+  var pass=document.getElementById('new-admin-pass').value.trim()
+  if (!sid||!name||!roll||!pass){ toast('Fill all fields','error'); return }
+  var res=await sb.from('users').insert({name:name,roll_no:roll,class:0,password:pass,role:'SCHOOL_ADMIN',activated:true,school_id:sid})
+  if (res.error){ toast(res.error.message,'error'); return }
+  toast('School admin created!','success')
+}
+
+async function genQuestions() {
+  var key=document.getElementById('ai-key').value.trim()
+  if (!key){ toast('Enter your Anthropic API key first','error'); return }
+  var cls=document.getElementById('ai-cls').value
+  var count=document.getElementById('ai-count').value
+  var diff=document.getElementById('ai-diff').value
+  var topics=Array.from(document.querySelectorAll('#topic-chips .chip.on')).map(function(c){ return c.textContent.trim() }).join(', ')
+  if (!topics){ toast('Select at least one topic','error'); return }
+  var btn=document.getElementById('ai-gen-btn')
+  btn.textContent='Generating...'; btn.disabled=true
+  document.getElementById('ai-preview').innerHTML='<div class="spinner">Generating <span class="spinner-dot" style="animation-delay:0s"></span><span class="spinner-dot" style="animation-delay:.2s"></span><span class="spinner-dot" style="animation-delay:.4s"></span></div>'
+  try {
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,
+        system:'You generate GK quiz questions for Indian school students. Return ONLY valid JSON array, no markdown, no extra text.',
+        messages:[{role:'user',content:'Generate '+count+' multiple-choice GK questions for Class '+cls+' Indian school students. Topics: '+topics+'. Difficulty: '+diff+'. Return ONLY a JSON array: [{"text":"?","option_a":"","option_b":"","option_c":"","option_d":"","correct":0,"topic":"","difficulty":"'+diff+'"}] where correct is 0-3.'}]})
+    })
+    var data=await res.json()
+    var text=data.content&&data.content[0]?data.content[0].text:''
+    var qs=JSON.parse(text.replace(/```json|```/g,'').trim())
+    var prev='<div style="font-size:13px;color:var(--green-dark);margin-bottom:12px;font-weight:500">'+qs.length+' questions generated</div>'
+    prev+=qs.slice(0,3).map(function(q,i){
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--border)">'
+        +'<div style="font-size:11px;color:var(--ink4);margin-bottom:3px">Q'+(i+1)+' · '+q.topic+'</div>'
+        +'<div style="font-size:13px;font-weight:500;margin-bottom:6px">'+q.text+'</div>'
+        +'<div class="chips">'+['option_a','option_b','option_c','option_d'].map(function(k,oi){ return '<span class="chip'+(oi===q.correct?' on':'')+'">'+(['A','B','C','D'][oi])+'. '+q[k]+'</span>' }).join('')+'</div>'
+      +'</div>'
+    }).join('')
+    if (qs.length>3) prev+='<div style="font-size:12px;color:var(--ink4);padding:8px 0">+' +(qs.length-3)+' more questions</div>'
+    prev+='<button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="saveQs(this)">Save all '+qs.length+' to database</button>'
+    document.getElementById('ai-preview').innerHTML=prev
+    document.getElementById('ai-preview').querySelector('button').dataset.qs=JSON.stringify(qs)
+    document.getElementById('ai-preview').querySelector('button').dataset.cls=cls
+    toast(qs.length+' questions generated!','success')
+  } catch(e) {
+    document.getElementById('ai-preview').innerHTML='<div class="alert alert-error">Error: '+e.message+'</div>'
+    toast('Generation failed','error')
+  }
+  btn.textContent='✨ Generate questions'; btn.disabled=false
+}
+
+async function saveQs(btn) {
+  var qs=JSON.parse(btn.dataset.qs), cls=parseInt(btn.dataset.cls)
+  var toSave=qs.map(function(q){ return Object.assign({},q,{class:cls,approved:true}) })
+  var res=await sb.from('questions').insert(toSave)
+  if (res.error){ toast('Save failed: '+res.error.message,'error'); return }
+  toast(qs.length+' questions saved!','success'); loadQList()
+  document.getElementById('ai-preview').innerHTML='<div class="alert alert-success">'+qs.length+' questions saved to database ✓</div>'
+}
+
+/* ── Leaderboard ────────────────────── */
+async function loadLeaderboard() {
+  var district=document.getElementById('lb-district').value
+  var cls=document.getElementById('lb-class').value
+  var q=sb.from('quiz_sessions').select('score,total_ms,class,users(name,schools(name))').eq('round','DISTRICT').eq('status','COMPLETED').order('score',{ascending:false}).order('total_ms',{ascending:true}).limit(10)
+  if (district!=='All') q=q.eq('district',district)
+  if (cls) q=q.eq('class',parseInt(cls))
+  var res=await q
+  var lbs=document.getElementById('lb-students')
+  var rkCls=['lb-1','lb-2','lb-3']
+  lbs.innerHTML=!res.data||!res.data.length?'<div class="empty">No completed sessions yet</div>':res.data.map(function(s,i){
+    return '<div class="lb-row"><div class="lb-rank '+(rkCls[i]||'lb-n')+'">'+(i+1)+'</div><div class="lb-info"><div class="lb-name">'+s.users.name+'</div><div class="lb-sub">'+(s.users.schools?s.users.schools.name:'')+'</div></div><div class="lb-score">'+s.score+'</div></div>'
+  }).join('')
+
+  var sq=sb.from('quiz_sessions').select('school_id,score,schools(name)').eq('round','DISTRICT').eq('status','COMPLETED')
+  if (district!=='All') sq=sq.eq('district',district)
+  var sr=await sq
+  var totals={}
+  ;(sr.data||[]).forEach(function(s){
+    if (!totals[s.school_id]) totals[s.school_id]={name:s.schools?s.schools.name:'—',total:0,count:0}
+    totals[s.school_id].total+=s.score; totals[s.school_id].count++
+  })
+  var sorted=Object.values(totals).sort(function(a,b){ return b.total-a.total }).slice(0,6)
+  document.getElementById('lb-schools').innerHTML=!sorted.length?'<div class="empty">No data yet</div>':sorted.map(function(s,i){
+    return '<div class="lb-row"><div class="lb-rank '+(rkCls[i]||'lb-n')+'">'+(i+1)+'</div><div class="lb-info"><div class="lb-name">'+s.name+'</div><div class="lb-sub">'+s.count+' qualifiers</div></div><div class="lb-score">'+s.total.toLocaleString()+'</div></div>'
+  }).join('')
+}
+
+/* ── Init ──────────────────────────── */
+loadHomeStats()
+setInterval(function(){ if(document.getElementById('pg-board').classList.contains('show')) loadLeaderboard() },30000)
+</script>
+</body>
+</html>
